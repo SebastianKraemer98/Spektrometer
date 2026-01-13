@@ -5,7 +5,7 @@ import threading
 import time
 from typing import Dict, List, Tuple
 
-from domain import SpectrumMeasurement, SpectrometerSettings
+from domain.models import SpectrumMeasurement, SpectrometerSettings
 
 try:
     import serial  

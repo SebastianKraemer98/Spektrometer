@@ -9,7 +9,7 @@ from typing import List, Optional, Tuple
 
 from domain.models import SpectrometerSettings
 from devices.spectrometer import SpectrometerClient
-from io.io_csv import CsvWriter
+from data_io.io_csv import CsvWriter
 
 try:
     import numpy as np  
@@ -23,11 +23,27 @@ except Exception:
 
 
 class Controller:
-    def __init__(self, spec: SpectrometerClient, csvw: CsvWriter, base_dir: Path, camera = None):
+    def __init__(
+            self, 
+            spec: SpectrometerClient, 
+            csvw: CsvWriter, 
+            data_dir, 
+            camera = None,
+            cloud_images_dirname = "Wolkenbilder",
+            dark_dirname = "Dunkelmessungen",
+            dark_samples: int = 3,
+            dark_sample_delay_s: float = 0.2,
+            dark_measurement_timeout_s: float = 12.0,
+            ):
         self.spec = spec
         self.csvw = csvw
-        self.base_dir = base_dir
+        self.data_dir = data_dir
         self.camera = camera
+        self.cloud_images_dirname = cloud_images_dirname
+        self.dark_dirname = dark_dirname
+        self.dark_samples = dark_samples
+        self.dark_sample_delay_s = dark_sample_delay_s
+        self.dark_measurement_timeout_s = dark_measurement_timeout_s
 
         self.stop_event = threading.Event()
         self.events: "Queue[Tuple[str, object]]" = Queue()
@@ -78,7 +94,7 @@ class Controller:
         if not self.camera:
             return
         try:
-            out_dir = self.base_dir / "Wolkenbilder" / day
+            out_dir = self.data_dir / self.cloud_images_dirname / day
             path = self.camera.capture_png(out_dir, ts)
             self.events.put(("log", ("cyan", f"Kamera: {path.name} gesichert.")))
         except Exception as e:
@@ -106,21 +122,20 @@ class Controller:
         try:
             self.events.put(("log", ("cyan", "Dunkelabgleich: Referenzmessung läuft...")))
             scans: List[List[float]] = []
-            for i in range(3):
-                m = self.spec.read_single_measurement(timeout_s=12.0)
+            for i in range(self.dark_samples):
+                m = self.spec.read_single_measurement(timeout_s=self.dark_measurement_timeout_s)
                 scans.append(m.intensities)
-                self.events.put(("log", ("cyan", f" Dunkel-Probe {i+1}/3 aufgenommen.")))
-                time.sleep(0.2)
-
+                self.events.put(("log", ("cyan", f" Dunkel-Probe {i+1}/{self.dark_samples} aufgenommen.")))
+                time.sleep(self.dark_sample_delay_s)
             if np is not None:
                 avg = (np.mean(np.array(scans), axis=0)).tolist()
             else:
                 n = len(scans[0])
-                avg = [sum(s[i] for s in scans) / 3.0 for i in range(n)]
+                avg = [sum(s[i] for s in scans) / float(self.dark_samples) for i in range(n)]
 
             self.dark_reference = [float(x) for x in avg]
 
-            dark_dir = self.base_dir / "Dunkelmessungen"
+            dark_dir = self.data_dir / self.dark_dirname
             fn = dark_dir / f"dark_{datetime.now():%Y-%m-%d_%H%M%S}.csv"
             self.csvw.write_dark(fn, self.spec.start_wl_nm, self.dark_reference, datetime.now())
 

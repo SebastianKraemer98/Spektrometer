@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from datetime import datetime
 from queue import Empty
-from typing import List
+from typing import List, Optional
 
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
 
 from app.controller import Controller
+from app.config import UIConfig
 from domain.models import SpectrometerSettings
 from devices.spectrometer import CIE_MAP, SpectrometerClient
 
@@ -16,10 +17,17 @@ from matplotlib.figure import Figure
 
 
 class AppUI:
-    def __init__(self, root: tk.Tk, controller: Controller, spec: SpectrometerClient):
+    def __init__(
+        self,
+        root: tk.Tk,
+        controller: Controller,
+        spec: SpectrometerClient,
+        ui_cfg: Optional[UIConfig] = None,
+    ):
         self.root = root
         self.controller = controller
         self.spec = spec
+        self.ui_cfg = ui_cfg if ui_cfg is not None else UIConfig()
 
         self.root.title("PJG Spectrometer & Cloud-Cam (Split Minimal Refactor)")
         self.root.geometry("1250x850")
@@ -32,7 +40,7 @@ class AppUI:
         self.root.after(50, self._poll_events)
 
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
-
+        
     def _build_widgets(self) -> None:
         ctrl_frame = tk.Frame(self.root, pady=10)
         ctrl_frame.pack(side=tk.TOP, fill=tk.X, padx=15)
@@ -40,11 +48,11 @@ class AppUI:
         exp_f = tk.LabelFrame(ctrl_frame, text=" Belichtung & Sync-Steuerung ", padx=15, pady=10)
         exp_f.pack(side=tk.LEFT, padx=5)
 
-        self.mode_var = tk.StringVar(value="auto")
+        self.mode_var = tk.StringVar(value=self.ui_cfg.default_exposure_mode)
         tk.Radiobutton(exp_f, text="Auto-Belichtung", variable=self.mode_var, value="auto").grid(row=0, column=0, sticky="w")
         tk.Radiobutton(exp_f, text="Manuell (ms):", variable=self.mode_var, value="manual").grid(row=1, column=0, sticky="w")
         self.entry_ms = tk.Entry(exp_f, width=8, justify="center")
-        self.entry_ms.insert(0, "500")
+        self.entry_ms.insert(0, str(self.ui_cfg.default_exposure_ms))
         self.entry_ms.grid(row=1, column=1, padx=5)
 
         opt_f = tk.LabelFrame(ctrl_frame, text=" CIE Standard ", padx=15, pady=10)

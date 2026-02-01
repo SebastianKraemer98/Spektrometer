@@ -1,0 +1,26 @@
+{
+  "spectrometer": {
+    "port": "/dev/ttyACM0",
+    "baudrate": 115200
+  },
+  "camera": {
+    "enabled": true
+  },
+  "storage": {
+    "data_dir": "/home/pi/pjg_data",
+    "measurement_dir_pattern": "Messungen_{day}",
+    "cloud_image_dir": "Wolkenbilder",
+    "dark_dirname": "Dunkelmessungen",
+    "csv_delimiter": ";"
+  },
+  "dark": {
+    "samples": 3,
+    "sample_delay_s": 0.2,
+    "measurement_timeout_s": 12.0
+  },
+  "ui": {
+    "window_title": "Messstation",
+    "default_exposure_mode": "auto",
+    "default_exposure_ms": 500.0
+  }
+}

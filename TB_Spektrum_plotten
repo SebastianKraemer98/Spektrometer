@@ -1,0 +1,37 @@
+import csv
+import matplotlib.pyplot as plt
+
+# ===== Datei auswählen =====
+CSV_FILE = "/home/raspi01/Dokumente/Fernerkundung_Spektrometer/Spektrometer/Messungen_2026-02-07/m_161700.csv"   # Pfad ggf. anpassen
+
+wavelength = []
+intensity = []
+
+with open(CSV_FILE, newline='', encoding="utf-8") as f:
+    reader = csv.reader(f, delimiter=';')
+    spectrum_section = False
+
+    for row in reader:
+        if not row:
+            continue
+
+        # Umschalten auf Spektraldaten
+        if row[0].startswith("--- SPEKTRUM"):
+            spectrum_section = True
+            continue
+
+        if spectrum_section:
+            wl = float(row[0])
+            val = float(row[1])
+            wavelength.append(wl)
+            intensity.append(val)
+
+# ===== Plot =====
+plt.figure(figsize=(8, 4))
+plt.plot(wavelength, intensity, lw=1.5)
+plt.xlabel("Wellenlänge [nm]")
+plt.ylabel("Intensität [W/m²]")
+plt.title("Spektrale Strahlungsverteilung")
+plt.grid(True, linestyle="--", alpha=0.6)
+plt.tight_layout()
+plt.show()
